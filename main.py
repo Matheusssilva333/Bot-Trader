@@ -4,25 +4,30 @@ from src.integrations.telegram_bot import TelegramBot
 from src.integrations.discord_bot import DiscordBot
 from dotenv import load_dotenv
 
+from src.utils.logger import setup_logger
+
 load_dotenv()
+logger = setup_logger("Main")
 
 def run_telegram():
     try:
+        logger.info("Iniciando Telegram Bot...")
         bot = TelegramBot()
         bot.run()
     except Exception as e:
-        print(f"Erro no Telegram Bot: {e}")
+        logger.error(f"Erro no Telegram Bot: {e}")
 
 def run_discord():
     try:
+        logger.info("Iniciando Discord Bot...")
         bot = DiscordBot()
         bot.run(os.getenv("DISCORD_TOKEN"))
     except Exception as e:
-        print(f"Erro no Discord Bot: {e}")
+        logger.error(f"Erro no Discord Bot: {e}")
 
 if __name__ == "__main__":
-    print("--- Sistema de Dashboards & Bots Trading AI ---")
-    print("Iniciando serviços...")
+    logger.info("--- Sistema de Dashboards & Bots Trading AI ---")
+    logger.info("Iniciando serviços...")
 
     # Verification of environment variables
     missing = []
@@ -31,8 +36,8 @@ if __name__ == "__main__":
             missing.append(var)
     
     if missing:
-        print(f"AVISO: As seguintes variáveis de ambiente estão faltando: {', '.join(missing)}")
-        print("Por favor, preencha o arquivo .env para que os bots funcionem corretamente.")
+        logger.warning(f"AVISO: As seguintes variáveis de ambiente estão faltando: {', '.join(missing)}")
+        logger.warning("Por favor, preencha o arquivo .env para que os bots funcionem corretamente.")
 
     # Running both bots in parallel threads for local testing
     # In production, it's better to use separate containers or processes.

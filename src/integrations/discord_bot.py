@@ -6,8 +6,10 @@ from src.data.data_manager import DataManager
 from src.models.predictor import TradingPredictor
 from src.integrations.mercado_pago import PaymentManager
 from src.database.db import get_user, create_or_update_user, init_db
+from src.utils.logger import setup_logger
 
 load_dotenv()
+logger = setup_logger("DiscordBot")
 
 class DiscordBot(commands.Bot):
     def __init__(self):
@@ -20,7 +22,7 @@ class DiscordBot(commands.Bot):
         init_db()
 
     async def on_ready(self):
-        print(f"Discord Bot logado como {self.user}")
+        logger.info(f"Discord Bot logado como {self.user}")
 
     @commands.command()
     async def vip(self, ctx):
@@ -38,8 +40,9 @@ class DiscordBot(commands.Bot):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def analisar(self, ctx):
+    async def analisar(self, ctx, asset: str = "WDO"):
         user_id = str(ctx.author.id)
+        asset = asset.upper()
         
         # Verification logic
         is_paid = self.pm.check_payment_status(f"discord_{user_id}")
@@ -51,11 +54,12 @@ class DiscordBot(commands.Bot):
             await ctx.send("❌ Acesso Negado. Use `!vip` para assinar.")
             return
 
-        await ctx.send("🔄 Analisando mercado...")
+        await ctx.send(f"🔄 Analisando mercado para {asset}...")
         
         try:
-            data = self.dm.fetch_data(period="5d", interval="5m")
-            data_with_indicators = self.dm.add_indicators(data)
+            dm = DataManager(asset_type=asset)
+            data = dm.fetch_data(period="5d", interval="5m")
+            data_with_indicators = dm.add_indicators(data)
             
             self.predictor.load_model()
             last_row = data_with_indicators.iloc[[-1]]
@@ -64,10 +68,11 @@ class DiscordBot(commands.Bot):
             signal = "🟢 COMPRA" if prediction == 1 else "🔴 VENDA"
             confidence = prob if prediction == 1 else (1 - prob)
             
-            embed = discord.Embed(title="📊 Análise de Mercado", color=discord.Color.blue())
-            embed.add_field(name="Ativo", value=self.dm.symbol, inline=True)
+            embed = discord.Embed(title="📊 Análise de Mercado B3", color=discord.Color.blue())
+            embed.add_field(name="Ativo", value=f"**{asset}**", inline=True)
             embed.add_field(name="Sinal", value=f"**{signal}**", inline=True)
             embed.add_field(name="Confiança", value=f"{confidence:.2%}", inline=False)
+            embed.add_field(name="Foco da Análise", value="Preço, Volume e Topo/Fundo", inline=False)
             embed.set_footer(text="Use com gerenciamento de risco.")
             
             await ctx.send(embed=embed)

@@ -32,24 +32,42 @@ class TradingPredictor:
 
     def train(self, df: pd.DataFrame):
         """
-        Trains the model on provided historical data.
+        Trains the model on provided historical data with TimeSeries cross-validation.
         """
+        from sklearn.model_selection import TimeSeriesSplit
+        import numpy as np
+        
         X, y = self.prepare_data(df)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
         
-        print("Training model...")
-        self.model.fit(X_train, y_train)
+        tscv = TimeSeriesSplit(n_splits=5)
+        acc_scores = []
+        prec_scores = []
         
-        # Validation
-        preds = self.model.predict(X_test)
-        acc = accuracy_score(y_test, preds)
-        prec = precision_score(y_test, preds)
+        print("Realizando validação cruzada (TimeSeriesSplit)...")
+        for train_index, test_index in tscv.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+            
+            self.model.fit(X_train, y_train)
+            preds = self.model.predict(X_test)
+            
+            acc_scores.append(accuracy_score(y_test, preds))
+            # Handle zero division if a model predicts all one class
+            prec_scores.append(precision_score(y_test, preds, zero_division=0))
+            
+        avg_acc = np.mean(acc_scores)
+        avg_prec = np.mean(prec_scores)
         
-        print(f"Model Training Complete. Accuracy: {acc:.2%}, Precision: {prec:.2%}")
+        print(f"Validação Completa. Acurácia Média: {avg_acc:.2%}, Precisão Média: {avg_prec:.2%}")
+        
+        print("Treinando modelo final com todos os dados...")
+        self.model.fit(X, y)
         self.save_model()
-        return acc, prec
+        return avg_acc, avg_prec
 
     def save_model(self):
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         self.model.save_model(self.model_path)
         print(f"Model saved to {self.model_path}")
 

@@ -15,7 +15,11 @@ class User(Base):
     payment_date = Column(DateTime)
     expiry_date = Column(DateTime)
 
-engine = create_engine(os.getenv("DATABASE_URL", "sqlite:///trading_bot.db"))
+db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
 
 def init_db():

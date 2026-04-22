@@ -6,8 +6,10 @@ from src.models.predictor import TradingPredictor
 from src.integrations.mercado_pago import PaymentManager
 from src.database.db import get_user, create_or_update_user, init_db
 from dotenv import load_dotenv
+from src.utils.logger import setup_logger
 
 load_dotenv()
+logger = setup_logger("TelegramBot")
 
 class TelegramBot:
     def __init__(self):
@@ -49,7 +51,7 @@ class TelegramBot:
         user_id = str(update.effective_user.id)
         user = get_user(user_id)
         
-        # Check VIP status (Simple mock check for now - in production use check_payment_status)
+        # Check VIP status
         is_paid = self.pm.check_payment_status(f"telegram_{user_id}")
         if is_paid:
             create_or_update_user(user_id, "telegram", True)
@@ -62,11 +64,17 @@ class TelegramBot:
             )
             return
 
-        await update.message.reply_text("🔄 Analisando mercado... aguarde.")
+        # Handle asset argument (e.g. /analisar WIN or /analisar WDO)
+        asset = "WDO" # Default
+        if context.args:
+            asset = context.args[0].upper()
+            
+        await update.message.reply_text(f"🔄 Analisando mercado para {asset}... aguarde.")
         
         try:
-            data = self.dm.fetch_data(period="5d", interval="5m")
-            data_with_indicators = self.dm.add_indicators(data)
+            dm = DataManager(asset_type=asset)
+            data = dm.fetch_data(period="5d", interval="5m")
+            data_with_indicators = dm.add_indicators(data)
             
             # Load model and predict
             self.predictor.load_model()
@@ -78,9 +86,10 @@ class TelegramBot:
             
             response = (
                 f"📊 *ANÁLISE FINALIZADA*\n\n"
-                f"Ativo: {self.dm.symbol}\n"
+                f"Ativo: {asset} (B3)\n"
                 f"Sinal: *{signal}*\n"
                 f"Confiança: {confidence:.2%}\n"
+                f"Foco: Preço, Volume e Topo/Fundo\n"
                 f"Estratégia: ML XGBoost V2\n\n"
                 f"⚠️ *Gerenciamento:* Use Stop Loss técnico e nunca arrisque mais de 1% da banca."
             )
@@ -93,7 +102,7 @@ class TelegramBot:
         app.add_handler(CommandHandler("start", self.start))
         app.add_handler(CommandHandler("vip", self.vip_command))
         app.add_handler(CommandHandler("analisar", self.analyze_command))
-        print("Telegram Bot is running...")
+        logger.info("Telegram Bot is running...")
         app.run_polling()
 
 if __name__ == "__main__":
