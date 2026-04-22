@@ -25,6 +25,27 @@ def run_discord():
     except Exception as e:
         logger.error(f"Erro no Discord Bot: {e}")
 
+import http.server
+import socketserver
+
+def run_http_server():
+    port = int(os.environ.get("PORT", 10000))
+    
+    class HealthCheckHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status": "Bot Trading Pro AI is running", "platform": "B3"}')
+            
+        def log_message(self, format, *args):
+            # Suppress HTTP access logs so they don't spam the console
+            pass
+
+    with socketserver.TCPServer(("", port), HealthCheckHandler) as httpd:
+        logger.info(f"Servidor HTTP (Web Service) ouvindo na porta {port}...")
+        httpd.serve_forever()
+
 if __name__ == "__main__":
     logger.info("--- Sistema de Dashboards & Bots Trading AI ---")
     logger.info("Iniciando serviços...")
@@ -39,13 +60,15 @@ if __name__ == "__main__":
         logger.warning(f"AVISO: As seguintes variáveis de ambiente estão faltando: {', '.join(missing)}")
         logger.warning("Por favor, preencha o arquivo .env para que os bots funcionem corretamente.")
 
-    # Running both bots in parallel threads for local testing
-    # In production, it's better to use separate containers or processes.
-    t_telegram = threading.Thread(target=run_telegram)
-    t_discord = threading.Thread(target=run_discord)
+    # Inicia os bots em Threads separadas para não bloquear o servidor HTTP
+    t_telegram = threading.Thread(target=run_telegram, daemon=True)
+    t_discord = threading.Thread(target=run_discord, daemon=True)
 
     t_telegram.start()
     t_discord.start()
 
-    t_telegram.join()
-    t_discord.join()
+    # O servidor HTTP roda na thread principal, mantendo o processo do Render vivo
+    try:
+        run_http_server()
+    except KeyboardInterrupt:
+        logger.info("Servidor desligado.")
