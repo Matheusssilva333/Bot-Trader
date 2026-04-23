@@ -22,7 +22,7 @@ class DiscordBot(commands.Bot):
         self.dm = DataManager()
         self.predictor = TradingPredictor()
         self.pm = PaymentManager()
-        init_db()
+
 
     async def setup_hook(self):
         # Register external commands

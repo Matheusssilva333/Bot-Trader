@@ -2,12 +2,16 @@ import threading
 import os
 from src.integrations.telegram_bot import TelegramBot
 from src.integrations.discord_bot import DiscordBot
+from src.database.db import init_db
 from dotenv import load_dotenv
 
 from src.utils.logger import setup_logger
 
 load_dotenv()
 logger = setup_logger("Main")
+
+init_db() # Call once at startup
+
 
 def run_telegram():
     try:

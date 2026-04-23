@@ -22,7 +22,7 @@ class TelegramBot:
         self.dm = DataManager()
         self.predictor = TradingPredictor()
         self.pm = PaymentManager()
-        init_db()
+
 
     def run(self):
         if not self.token:
@@ -45,7 +45,9 @@ class TelegramBot:
         setup_telegram_commands(app, self)
         
         logger.info("Telegram Bot is running with menu commands...")
-        app.run_polling()
+        # stop_signals=False is REQUIRED when running in a thread
+        app.run_polling(stop_signals=False)
+
 
 
 if __name__ == "__main__":
