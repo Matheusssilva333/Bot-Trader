@@ -13,3 +13,4 @@ mercadopago
 sqlalchemy
 requests
 anthropic
+psycopg2-binary

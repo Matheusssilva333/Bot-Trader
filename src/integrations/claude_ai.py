@@ -28,17 +28,19 @@ class ClaudeAnalyzer:
 
         try:
             prompt = (
-                f"Você é um analista sênior de trading na B3. Acabamos de gerar um sinal para {asset}.\n\n"
-                f"📊 **Dados Técnicos:**\n"
-                f"- Sinal sugerido: {signal}\n"
-                f"- Confiança do modelo XGBoost: {confidence:.2%}\n"
-                f"- Preço Atual: {indicators.get('close')}\n"
-                f"- RSI (2 períodos): {indicators.get('rsi', 'N/A')}\n"
-                f"- Distância da Banda Superior: {indicators.get('bb_high', 'N/A')}\n"
-                f"- Distância da Banda Inferior: {indicators.get('bb_low', 'N/A')}\n\n"
-                "Forneça uma explicação técnica curta (máximo 3 frases) em português do Brasil "
-                "justificando este sinal com base no Price Action e nos indicadores. Seja profissional e direto."
+                f"Aja como um analista quantitativo sênior de mesa proprietária. Sinal para {asset}.\n\n"
+                f"📊 **Métricas Técnicas:**\n"
+                f"- Direção Sugerida: {signal}\n"
+                f"- Confiança do Algoritmo XGBoost: {confidence:.2%}\n"
+                f"- Preço de Fechamento: {indicators.get('close')}\n"
+                f"- Médias Móveis: EMA9 @ {indicators.get('ema_9')}, EMA21 @ {indicators.get('ema_21')}\n"
+                f"- Volatilidade: Bandas de Bollinger {indicators.get('bb_high')} / {indicators.get('bb_low')}\n"
+                f"- Momentum: RSI14 @ {indicators.get('rsi_14', 'N/A')}\n\n"
+                "Instrução: Forneça um parecer técnico extremamente conciso (máximo 250 caracteres) "
+                "em português. Foque no motivo principal (ex: exaustão, rompimento, tendência). "
+                "Seja direto e autoritativo."
             )
+
 
             message = self.client.messages.create(
                 model="claude-3-haiku-20240307", # Fast and cost-effective for signals
