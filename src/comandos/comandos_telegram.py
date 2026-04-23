@@ -177,6 +177,35 @@ async def vip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_in
     msg = "💎 *ACESSO VIP*\n\nClique no botão abaixo para assinar:"
     await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode='Markdown')
 
+async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance):
+    """
+    Passes any non-command message to Claude AI.
+    """
+    if not update.message or not update.message.text:
+        return
+
+    user_text = update.message.text
+    user_id = str(update.effective_user.id)
+    
+    # Check trial/VIP status for chat too (Optional but recommended)
+    user = get_user(user_id)
+    if not user:
+        create_or_update_user(user_id, "telegram", False)
+        user = get_user(user_id)
+    
+    trial_days = 7
+    trial_expired = (datetime.datetime.now() - user.created_at).days >= trial_days
+    
+    if not user.is_vip and trial_expired:
+        await update.message.reply_text("❌ Seu teste grátis expirou. Assine o VIP para continuar conversando com a nossa IA.")
+        return
+
+    # Use typing indicator
+    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+    
+    response = await bot_instance.ai.chat_with_user(user_text)
+    await update.message.reply_text(response)
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance):
     query = update.callback_query
     data = query.data
@@ -190,6 +219,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.message.reply_text("💎 Para se tornar VIP:", reply_markup=reply_markup)
 
+from telegram.ext import MessageHandler, filters
+
 def setup_telegram_commands(app, bot_instance):
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("ajuda", help_command))
@@ -199,3 +230,6 @@ def setup_telegram_commands(app, bot_instance):
     app.add_handler(CommandHandler("vip", lambda u, c: vip_handler(u, c, bot_instance)))
     app.add_handler(CommandHandler("analisar", lambda u, c: analyze_handler(u, c, bot_instance)))
     app.add_handler(CallbackQueryHandler(lambda u, c: button_callback(u, c, bot_instance)))
+    
+    # General chat handler (must be last)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: chat_handler(u, c, bot_instance)))

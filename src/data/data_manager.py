@@ -22,20 +22,38 @@ class DataManager:
         self.asset_type = asset_type.upper()
         self.symbol = self.asset_map.get(self.asset_type, "BRL=X")
 
-    def fetch_data(self, period: str = "60d", interval: str = "5m"):
+    def fetch_data(self, period: str = "7d", interval: str = "5m"):
         """
-        Fetches historical data from Yahoo Finance.
+        Fetches historical data with fallbacks.
         """
-        logger.info(f"Buscando dados para {self.asset_type} (Ticker: {self.symbol})...")
-        df = yf.download(self.symbol, period=period, interval=interval, threads=False)
+        try:
+            logger.info(f"Buscando dados para {self.asset_type} (Ticker: {self.symbol})...")
+            df = yf.download(self.symbol, period=period, interval=interval, threads=False, progress=False)
+            
+            if df.empty or len(df) < 30:
+                logger.warning(f"Dados insuficientes para {interval}. Tentando 15m...")
+                df = yf.download(self.symbol, period="30d", interval="15m", threads=False, progress=False)
 
-        if df.empty:
-            logger.error(f"Nenhum dado encontrado para {self.symbol}")
-            raise ValueError(f"Nenhum dado encontrado para {self.symbol}")
-        
-        # Standardize column names to lowercase
-        df.columns = [col.lower() for col in df.columns]
-        return df
+            if df.empty:
+                logger.error(f"Erro crítico: Yahoo Finance retornou DataFrame vazio para {self.symbol}")
+                raise ValueError(f"Ticker {self.symbol} não retornou dados.")
+
+            # Fix for MultiIndex columns in new yfinance versions
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+
+            df.columns = [col.lower() for col in df.columns]
+            
+            # Basic validation
+            required = ['open', 'high', 'low', 'close']
+            for col in required:
+                if col not in df.columns:
+                    raise ValueError(f"Coluna obrigatória {col} faltando nos dados.")
+            
+            return df
+        except Exception as e:
+            logger.error(f"Erro ao baixar dados: {e}")
+            raise e
 
     def add_indicators(self, df: pd.DataFrame):
         """

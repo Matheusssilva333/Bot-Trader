@@ -182,8 +182,41 @@ class TradingCommands(commands.Cog):
             
             await status_msg.edit(content=None, embed=embed)
         except Exception as e:
-            logger.error(f"Erro na análise Discord: {e}")
             await status_msg.edit(content=f"❌ **Erro:** Não foi possível analisar o ativo {asset}.")
+            
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        """
+        Handles general messages in DMs or when the bot is mentioned.
+        """
+        if message.author.bot:
+            return
+
+        # Handle DMs or mentions as a chat
+        is_dm = isinstance(message.channel, discord.DMChannel)
+        is_mention = self.bot.user.mentioned_in(message)
+        
+        if (is_dm or is_mention) and not message.content.startswith(self.bot.command_prefix):
+            user_id = str(message.author.id)
+            user = get_user(user_id)
+            
+            # Check trial/VIP
+            if not user:
+                create_or_update_user(user_id, "discord", False)
+                user = get_user(user_id)
+                
+            import datetime
+            trial_days = 7
+            trial_expired = (datetime.datetime.now() - user.created_at).days >= trial_days
+            
+            if not user.is_vip and trial_expired:
+                await message.reply("❌ Seu teste grátis expirou. Assine o VIP para continuar conversando com a nossa IA.")
+                return
+
+            async with message.channel.typing():
+                response = await self.bot.ai.chat_with_user(message.content)
+                await message.reply(response)
+
 
 async def setup_discord_commands(bot):
     await bot.add_cog(TradingCommands(bot))

@@ -52,3 +52,33 @@ class ClaudeAnalyzer:
         except Exception as e:
             logger.error(f"Erro ao consultar Claude: {e}")
             return "Erro ao processar análise avançada via Claude."
+
+    async def chat_with_user(self, user_message: str):
+        """
+        Handles general conversation with the user using Claude AI.
+        """
+        if not self.client:
+            return "Chat indisponível (Chave API não configurada)."
+
+        try:
+            prompt = (
+                "Você é o 'Bot Trading Pro AI', um assistente especializado em mercado financeiro (B3). "
+                "Sua personalidade é prestativa, profissional e focada em resultados. "
+                "Ajude o usuário com dúvidas sobre trading, o bot, ou o mercado em geral. "
+                "Mantenha respostas concisas e objetivas.\n\n"
+                f"Usuário diz: {user_message}"
+            )
+
+            message = self.client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=300,
+                temperature=0.7,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return message.content[0].text
+        except Exception as e:
+            logger.error(f"Erro no chat Claude: {e}")
+            return "Desculpe, tive um problema ao processar sua mensagem."
+

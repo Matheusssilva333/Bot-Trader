@@ -1,13 +1,13 @@
-pandas<2.2.0
-numpy<2.0.0
-yfinance
-https://www.pandas-ta.dev/assets/zip/pandas_ta-0.3.14b.tar.gz
+pandas
+numpy
+yfinance --upgrade
+pandas-ta
 xgboost
 scikit-learn
 plotly
 python-dotenv
 ta
-python-telegram-bot
+python-telegram-bot --upgrade
 discord.py
 mercadopago
 sqlalchemy
