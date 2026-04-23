@@ -1,7 +1,7 @@
 pandas<2.2.0
 numpy<2.0.0
 yfinance
-https://github.com/twopirllc/pandas-ta/archive/refs/heads/main.zip
+https://www.pandas-ta.dev/assets/zip/pandas_ta-0.3.14b.tar.gz
 xgboost
 scikit-learn
 plotly
