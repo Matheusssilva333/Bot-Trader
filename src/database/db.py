@@ -1,64 +1,88 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, create_engine
+import os
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import datetime
-import os
+import logging
 
+logger = logging.getLogger("Database")
 Base = declarative_base()
+
+# Variáveis globais que serão inicializadas dinamicamente
+engine = None
+Session = None
+
+def get_engine():
+    global engine
+    if engine is None:
+        db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
+
+        # Sanitização Profissional de URL
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+        elif db_url.startswith("https://"):
+            logger.warning("⚠️ DATABASE_URL detectada como HTTPS. Usando SQLite local.")
+            db_url = "sqlite:///trading_bot.db"
+
+        # Otimização para Supabase / PGBouncer
+        engine = create_engine(
+            db_url,
+            pool_pre_ping=False,
+            pool_recycle=1800
+        )
+    return engine
+
+def get_session():
+    global Session
+    if Session is None:
+        Session = sessionmaker(bind=get_engine())
+    return Session()
+
+def init_db():
+    """Inicializa as tabelas do banco de dados."""
+    try:
+        Base.metadata.create_all(get_engine())
+    except Exception as e:
+        logger.error(f"Falha crítica na inicialização do DB: {e}")
+        raise e
+
+# Modelos (Exemplo de User)
+from sqlalchemy import Column, String, Boolean, DateTime
+import datetime
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    platform_id = Column(String, unique=True) # Discord or Telegram ID
-    platform = Column(String) # 'telegram' or 'discord'
+    id = Column(String, primary_key=True)
+    platform = Column(String)
     is_vip = Column(Boolean, default=False)
-    payment_date = Column(DateTime)
-    expiry_date = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.datetime.now)
+    subscription_date = Column(DateTime, nullable=True)
+    last_interaction = Column(DateTime, default=datetime.datetime.utcnow)
 
+def get_user(user_id):
+    session = get_session()
+    try:
+        return session.query(User).filter(User.id == str(user_id)).first()
+    finally:
+        session.close()
 
-db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
-
-# Sanitização Profissional de URL (Suporte total ao Supabase/Render)
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-elif "supabase.co" in db_url and db_url.startswith("https://"):
-    print("⚠️ AVISO: Você usou a URL da API do Supabase. Use a Connection String (URI) da aba Database Settings.")
-    db_url = "sqlite:///trading_bot.db"
-
-# Configuração de Engine otimizada para Supabase Pooler (PGBouncer)
-# Nota: Alguns poolers não suportam pre-ping ou exigem configurações específicas
-engine = create_engine(
-    db_url,
-    pool_pre_ping=False, # Desativado para compatibilidade total com PGBouncer em modo Transaction
-    pool_size=5,
-    max_overflow=10,
-    pool_recycle=1800
-)
-Session = sessionmaker(bind=engine)
-
-
-
-
-def init_db():
-    Base.metadata.create_all(engine)
-
-def get_user(platform_id: str):
-    session = Session()
-    user = session.query(User).filter_by(platform_id=platform_id).first()
-    session.close()
-    return user
-
-def create_or_update_user(platform_id: str, platform: str, is_vip: bool = False):
-    session = Session()
-    user = session.query(User).filter_by(platform_id=platform_id).first()
-    if not user:
-        user = User(platform_id=platform_id, platform=platform, is_vip=is_vip)
-        session.add(user)
-    else:
-        user.is_vip = is_vip
-        if is_vip:
-            user.payment_date = datetime.datetime.now()
-            user.expiry_date = user.payment_date + datetime.timedelta(days=30)
-    session.commit()
-    session.close()
+def create_or_update_user(user_id, platform="telegram", is_vip=None):
+    session = get_session()
+    try:
+        user = session.query(User).filter(User.id == str(user_id)).first()
+        if not user:
+            user = User(id=str(user_id), platform=platform)
+            session.add(user)
+        
+        if is_vip is not None:
+            user.is_vip = is_vip
+            if is_vip:
+                user.subscription_date = datetime.datetime.utcnow()
+        
+        user.last_interaction = datetime.datetime.utcnow()
+        session.commit()
+        return user
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Erro ao salvar usuário: {e}")
+        return None
+    finally:
+        session.close()
