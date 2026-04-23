@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger("TelegramCommands")
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user_name = update.effective_user.first_name
     
@@ -35,7 +36,6 @@ logger = logging.getLogger("TelegramCommands")
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(welcome_msg, parse_mode='Markdown', reply_markup=reply_markup)
-
 
 async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info_text = (
@@ -70,6 +70,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
     user = get_user(user_id)
     if not user:
         create_or_update_user(user_id, "telegram", False)
@@ -96,7 +98,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += "\n\nUse /vip para liberar acesso vitalício."
         
     await update.message.reply_text(msg, parse_mode='Markdown')
-
 
 async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance, asset=None):
     # This can be called from command or callback
@@ -141,7 +142,6 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         else:
             await effective_update.reply_text(msg, parse_mode='Markdown')
         return
-
 
     wait_msg = await effective_update.reply_text(f"🔄 *Analisando {asset}...* extraindo indicadores de volume e preço.", parse_mode='Markdown')
     
