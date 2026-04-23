@@ -41,7 +41,10 @@ def main():
         logger.warning("⚠️ Iniciando em modo de segurança com Banco Local (SQLite)...")
         # Forçamos o banco local se o principal falhar
         os.environ["DATABASE_URL"] = "sqlite:///trading_bot_fallback.db"
-        init_db()
+        from src.database.db import reset_db
+        reset_db() # Limpa a conexão antiga do Supabase que falhou
+        init_db()  # Tenta novamente com o novo DATABASE_URL (SQLite)
+
 
     
     telegram_token = os.getenv("TELEGRAM_TOKEN")

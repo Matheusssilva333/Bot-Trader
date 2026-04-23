@@ -11,17 +11,24 @@ Base = declarative_base()
 engine = None
 Session = None
 
+def reset_db():
+    """Limpa a conexão atual para permitir uma nova inicialização (usado no fallback)."""
+    global engine, Session
+    engine = None
+    Session = None
+    logger.info("🔄 Conexão com o banco de dados resetada para nova tentativa.")
+
 def get_engine():
     global engine
     if engine is None:
         db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
-
+        
         # Sanitização Profissional de URL
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
         elif db_url.startswith("https://"):
-            logger.warning("⚠️ DATABASE_URL detectada como HTTPS. Usando SQLite local.")
             db_url = "sqlite:///trading_bot.db"
+
 
         # Otimização para Supabase / PGBouncer
         engine = create_engine(
