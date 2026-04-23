@@ -3,6 +3,7 @@ from telegram.ext import CommandHandler, ContextTypes, CallbackQueryHandler
 from src.database.db import get_user, create_or_update_user
 from src.data.data_manager import DataManager
 import logging
+import datetime
 
 logger = logging.getLogger("TelegramCommands")
 
@@ -25,7 +26,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Analiso volume e price action para prever a próxima tendência.\n\n"
         "📌 *Comandos:*\n"
         "• /analisar - Gera um sinal\n"
-        "• /status - Ver quanto tempo de teste resta"
+        "• /status - Ver quanto tempo de teste resta\n"
+        "• /ajuda - Guia de uso"
     )
     
     keyboard = [
@@ -43,20 +45,18 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "O Bot utiliza um modelo **XGBoost (Extreme Gradient Boosting)** treinado com dados históricos da B3.\n\n"
         "🔍 *Fatores de Decisão:*\n"
         "• **Volume:** Analisa a força do movimento.\n"
-        "• **Price Action:** Detecta topos e fundos (Donchian Channels).\n"
-        "• **Tendência:** Médias Móveis Exponenciais (9 e 21 períodos).\n"
-        "• **Volatilidade:** Bandas de Bollinger.\n\n"
-        "O modelo busca padrões que precedem movimentos de alta ou baixa com probabilidade estatística calculada em tempo real."
+        "• **Price Action:** Detecta topos e fundos.\n"
+        "• **Tendência:** Médias Móveis Exponenciais (9 e 21).\n"
+        "• **Volatilidade:** Bandas de Bollinger."
     )
     await update.message.reply_text(info_text, parse_mode='Markdown')
 
 async def suporte_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     suporte_text = (
         "🛠️ *Suporte Técnico*\n\n"
-        "Está com problemas ou tem dúvidas sobre o bot?\n"
         "Fale diretamente com nosso suporte no Telegram:\n\n"
-        "👉 @seu_suporte_aqui\n\n"
-        "Horário de atendimento: Segunda a Sexta, das 09:00 às 18:00."
+        "👉 @seu_suporte_aqui\n"
+        "Horário: Segunda a Sexta, das 09:00 às 18:00."
     )
     await update.message.reply_text(suporte_text, parse_mode='Markdown')
 
@@ -64,9 +64,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
         "📖 *Guia de Uso do Bot Trading Pro*\n\n"
         "1️⃣ *Análise:* Use `/analisar WDO` ou `/analisar WIN`. Se não especificar, o padrão é WDO.\n"
-        "2️⃣ *VIP:* O acesso VIP libera sinais ilimitados. Sem o VIP, você tem acesso limitado ou apenas demonstrações.\n"
+        "2️⃣ *VIP:* O acesso VIP libera sinais ilimitados.\n"
         "3️⃣ *Gerenciamento:* NUNCA opere sem Stop Loss. O bot indica a tendência, mas o mercado é soberano.\n\n"
-        "❓ *Dúvidas?* Entre em contato com o suporte @seu_suporte"
+        "❓ *Dúvidas?* @seu_suporte"
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
@@ -77,7 +77,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         create_or_update_user(user_id, "telegram", False)
         user = get_user(user_id)
 
-    import datetime
     trial_days = 7
     days_used = (datetime.datetime.now() - user.created_at).days
     days_left = max(0, trial_days - days_used)
@@ -100,7 +99,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode='Markdown')
 
 async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance, asset=None):
-    # This can be called from command or callback
     query = update.callback_query
     if query:
         await query.answer()
@@ -120,30 +118,23 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         create_or_update_user(user_id, "telegram", False)
         user = get_user(user_id)
     
-    # Check VIP status (Sync with Mercado Pago)
     is_paid = bot_instance.pm.check_payment_status(f"telegram_{user_id}")
     if is_paid:
         create_or_update_user(user_id, "telegram", True)
         user = get_user(user_id)
 
-    # TRIAL LOGIC: Check if VIP OR if trial (7 days) is still active
-    import datetime
     trial_days = 7
     trial_expired = (datetime.datetime.now() - user.created_at).days >= trial_days
     
     if not user.is_vip and trial_expired:
-        msg = (
-            "❌ *Período de Teste Expirado*\n\n"
-            "Seus 7 dias gratuitos acabaram. Para continuar recebendo sinais de alta precisão, adquira o acesso VIP.\n\n"
-            "Use /vip para assinar por apenas R$ 30,00."
-        )
+        msg = "❌ *Teste Expirado*\n\nSeus 7 dias grátis acabaram. Use /vip para assinar."
         if query:
             await query.edit_message_text(msg, parse_mode='Markdown')
         else:
             await effective_update.reply_text(msg, parse_mode='Markdown')
         return
 
-    wait_msg = await effective_update.reply_text(f"🔄 *Analisando {asset}...* extraindo indicadores de volume e preço.", parse_mode='Markdown')
+    wait_msg = await effective_update.reply_text(f"🔄 *Analisando {asset}...*", parse_mode='Markdown')
     
     try:
         dm = DataManager(asset_type=asset)
@@ -156,8 +147,6 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         
         signal = "🟢 COMPRA" if prediction == 1 else "🔴 VENDA"
         confidence = prob if prediction == 1 else (1 - prob)
-        
-        # Determine color/emoji based on confidence
         strength = "🔥 FORTE" if confidence > 0.75 else "⚡ MODERADA"
         
         response = (
@@ -166,50 +155,33 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
             f"Sinal: *{signal}*\n"
             f"Força: *{strength}*\n"
             f"Confiança: `{confidence:.2%}`\n\n"
-            f"🎯 *Pontos de Atenção:*\n"
-            f"• Suporte/Resistência detectados\n"
-            f"• Tendência confirmada por Volume\n"
-            f"• Estratégia: XGBoost Pro V2\n\n"
-            f"⚠️ *Aviso:* Use stop loss. Lucros passados não garantem lucros futuros."
+            f"⚠️ Use stop loss técnico em todas as operações."
         )
-        
         await wait_msg.edit_text(response, parse_mode='Markdown')
     except Exception as e:
-        logger.error(f"Erro na análise: {e}")
-        await wait_msg.edit_text(f"❌ *Erro:* Ocorreu um problema ao buscar dados do ativo {asset}.")
+        logger.error(f"Erro na análise Telegram: {e}")
+        await wait_msg.edit_text(f"❌ *Erro:* Não foi possível obter dados para `{asset}` no momento. Tente novamente em instantes.")
 
 async def vip_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance):
     user_id = str(update.effective_user.id)
     payment_url = bot_instance.pm.create_payment_link(user_id, "telegram")
-    
-    keyboard = [[InlineKeyboardButton("🚀 Pagar via Pix (R$ 30,00)", url=payment_url)]]
+    keyboard = [[InlineKeyboardButton("🚀 Pagar R$ 30,00", url=payment_url)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    msg = (
-        "💎 *VANTAGENS DO ACESSO VIP*\n\n"
-        "✅ Sinais ilimitados para WIN e WDO\n"
-        "✅ Maior precisão (Modelos 2.0)\n"
-        "✅ Suporte prioritário\n"
-        "✅ Acesso vitalício (Sem mensalidade)\n\n"
-        "Clique no botão abaixo para gerar seu QR Code ou Link Pix:"
-    )
-    
+    msg = "💎 *ACESSO VIP*\n\nClique no botão abaixo para assinar:"
     await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance):
     query = update.callback_query
     data = query.data
-    
     if data.startswith("analyze_"):
         asset = data.split("_")[1]
         await analyze_handler(update, context, bot_instance, asset=asset)
     elif data == "get_vip":
-        # Simulating a call to vip_handler logic but for callback
         user_id = str(query.from_user.id)
         payment_url = bot_instance.pm.create_payment_link(user_id, "telegram")
-        keyboard = [[InlineKeyboardButton("🚀 Pagar via Pix (R$ 30,00)", url=payment_url)]]
+        keyboard = [[InlineKeyboardButton("🚀 Pagar R$ 30,00", url=payment_url)]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("💎 Para se tornar VIP, clique no botão abaixo:", reply_markup=reply_markup)
+        await query.message.reply_text("💎 Para se tornar VIP:", reply_markup=reply_markup)
 
 def setup_telegram_commands(app, bot_instance):
     app.add_handler(CommandHandler("start", start))
@@ -219,6 +191,4 @@ def setup_telegram_commands(app, bot_instance):
     app.add_handler(CommandHandler("suporte", suporte_command))
     app.add_handler(CommandHandler("vip", lambda u, c: vip_handler(u, c, bot_instance)))
     app.add_handler(CommandHandler("analisar", lambda u, c: analyze_handler(u, c, bot_instance)))
-    
-    # Callback queries for buttons
     app.add_handler(CallbackQueryHandler(lambda u, c: button_callback(u, c, bot_instance)))

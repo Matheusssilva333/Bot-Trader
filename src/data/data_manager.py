@@ -27,7 +27,8 @@ class DataManager:
         Fetches historical data from Yahoo Finance.
         """
         logger.info(f"Buscando dados para {self.asset_type} (Ticker: {self.symbol})...")
-        df = yf.download(self.symbol, period=period, interval=interval)
+        df = yf.download(self.symbol, period=period, interval=interval, threads=False)
+
         if df.empty:
             logger.error(f"Nenhum dado encontrado para {self.symbol}")
             raise ValueError(f"Nenhum dado encontrado para {self.symbol}")
