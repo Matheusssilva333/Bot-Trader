@@ -47,28 +47,38 @@ def run_http_server():
         httpd.serve_forever()
 
 if __name__ == "__main__":
-    logger.info("--- Sistema de Dashboards & Bots Trading AI ---")
-    logger.info("Iniciando serviços...")
-
-    # Verification of environment variables
-    missing = []
-    for var in ["TELEGRAM_TOKEN", "DISCORD_TOKEN", "MERCADO_PAGO_ACCESS_TOKEN"]:
-        if not os.getenv(var):
-            missing.append(var)
+    logger.info("🚀 Iniciando Sistema Trading Pro AI...")
     
-    if missing:
-        logger.warning(f"AVISO: As seguintes variáveis de ambiente estão faltando: {', '.join(missing)}")
-        logger.warning("Por favor, preencha o arquivo .env para que os bots funcionem corretamente.")
+    # Check for critical environment variables
+    telegram_token = os.getenv("TELEGRAM_TOKEN")
+    discord_token = os.getenv("DISCORD_TOKEN")
+    mp_token = os.getenv("MERCADO_PAGO_ACCESS_TOKEN")
+    
+    if not telegram_token and not discord_token:
+        logger.error("❌ ERRO CRÍTICO: Nenhum token de bot (Telegram ou Discord) foi encontrado.")
+        logger.error("Certifique-se de configurar as variáveis de ambiente no Render.")
+    
+    # Start Telegram Bot Thread
+    if telegram_token:
+        t_telegram = threading.Thread(target=run_telegram, name="TelegramThread", daemon=True)
+        t_telegram.start()
+        logger.info("✅ Thread do Telegram iniciada.")
+    else:
+        logger.warning("⚠️ Ignorando Telegram Bot (TOKEN ausente).")
 
-    # Inicia os bots em Threads separadas para não bloquear o servidor HTTP
-    t_telegram = threading.Thread(target=run_telegram, daemon=True)
-    t_discord = threading.Thread(target=run_discord, daemon=True)
+    # Start Discord Bot Thread
+    if discord_token:
+        t_discord = threading.Thread(target=run_discord, name="DiscordThread", daemon=True)
+        t_discord.start()
+        logger.info("✅ Thread do Discord iniciada.")
+    else:
+        logger.warning("⚠️ Ignorando Discord Bot (TOKEN ausente).")
 
-    t_telegram.start()
-    t_discord.start()
-
-    # O servidor HTTP roda na thread principal, mantendo o processo do Render vivo
+    # The HTTP Server runs on the main thread and is REQUIRED for Render Web Services
     try:
         run_http_server()
     except KeyboardInterrupt:
-        logger.info("Servidor desligado.")
+        logger.info("Stopping...")
+    except Exception as e:
+        logger.error(f"Erro no Servidor HTTP: {e}")
+

@@ -10,7 +10,7 @@ class TradingCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="start")
+    @commands.hybrid_command(name="start", description="Inicia o bot e mostra as opções principais")
     async def start(self, ctx):
         embed = discord.Embed(
             title="👋 Bem-vindo ao Bot Trading Pro AI",
@@ -21,12 +21,11 @@ class TradingCommands(commands.Cog):
             ),
             color=discord.Color.blue()
         )
-        embed.add_field(name="📌 Comandos", value="`!analisar` - Gerar sinal\n`!vip` - Adquirir acesso\n`!ajuda` - Guia completo", inline=False)
+        embed.add_field(name="📌 Comandos", value="`!analisar` ou `/analisar` - Gerar sinal\n`!vip` ou `/vip` - Adquirir acesso\n`!ajuda` ou `/ajuda` - Guia completo", inline=False)
         
-        # In Discord, we use buttons via View, but for now let's keep it simple with text/embed
         await ctx.send(embed=embed)
 
-    @commands.command(name="info")
+    @commands.hybrid_command(name="info", description="Sobre a Inteligência Artificial do bot")
     async def info(self, ctx):
         embed = discord.Embed(
             title="🤖 Sobre a Inteligência Artificial",
@@ -42,7 +41,7 @@ class TradingCommands(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name="suporte")
+    @commands.hybrid_command(name="suporte", description="Obter suporte técnico")
     async def suporte(self, ctx):
         embed = discord.Embed(
             title="🛠️ Suporte Técnico",
@@ -56,20 +55,20 @@ class TradingCommands(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name="ajuda")
+    @commands.hybrid_command(name="ajuda", description="Como usar o bot")
     async def ajuda(self, ctx):
         embed = discord.Embed(
             title="📖 Guia de Uso",
             description=(
-                "1️⃣ **Análise:** Use `!analisar WDO` ou `!analisar WIN`.\n"
-                "2️⃣ **VIP:** Libera sinais ilimitados. Use `!vip` para assinar.\n"
+                "1️⃣ **Análise:** Use `/analisar WDO` ou `/analisar WIN`.\n"
+                "2️⃣ **VIP:** Libera sinais ilimitados. Use `/vip` para assinar.\n"
                 "3️⃣ **Gerenciamento:** NUNCA opere sem Stop Loss."
             ),
             color=discord.Color.green()
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name="status")
+    @commands.hybrid_command(name="status", description="Verificar status da sua conta")
     async def status(self, ctx):
         user_id = str(ctx.author.id)
         user = get_user(user_id)
@@ -80,11 +79,11 @@ class TradingCommands(commands.Cog):
         embed.add_field(name="Plano", value=status, inline=True)
         
         if not user or not user.is_vip:
-            embed.set_footer(text="⚠️ Plano limitado. Use !vip para assinar.")
+            embed.set_footer(text="⚠️ Plano limitado. Use /vip para assinar.")
             
         await ctx.send(embed=embed)
 
-    @commands.command(name="vip")
+    @commands.hybrid_command(name="vip", description="Tornar-se membro VIP")
     async def vip(self, ctx):
         user_id = str(ctx.author.id)
         payment_url = self.bot.pm.create_payment_link(user_id, "discord")
@@ -103,8 +102,9 @@ class TradingCommands(commands.Cog):
         
         await ctx.send(embed=embed)
 
-    @commands.command(name="analisar")
+    @commands.hybrid_command(name="analisar", description="Analisar tendência da B3 (WIN ou WDO)")
     async def analisar(self, ctx, asset: str = "WDO"):
+
         user_id = str(ctx.author.id)
         asset = asset.upper()
         

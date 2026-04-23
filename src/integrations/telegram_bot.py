@@ -27,13 +27,26 @@ class TelegramBot:
     def run(self):
         if not self.token:
             return
-        app = ApplicationBuilder().token(self.token).build()
+            
+        async def post_init(application):
+            await application.bot.set_my_commands([
+                ("start", "Inicia o bot"),
+                ("analisar", "Gera um sinal de trading"),
+                ("vip", "Adquire acesso VIP"),
+                ("status", "Verifica seu plano"),
+                ("ajuda", "Mostra o guia de uso"),
+                ("info", "Sobre a IA"),
+                ("suporte", "Suporte técnico")
+            ])
+
+        app = ApplicationBuilder().token(self.token).post_init(post_init).build()
         
         # Setup external commands
         setup_telegram_commands(app, self)
         
-        logger.info("Telegram Bot is running with external commands...")
+        logger.info("Telegram Bot is running with menu commands...")
         app.run_polling()
+
 
 if __name__ == "__main__":
     bot = TelegramBot()
