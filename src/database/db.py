@@ -19,16 +19,21 @@ class User(Base):
 
 db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
 
-# Fix common Render/PostgreSQL URL issues
+# Sanitização Profissional de URL (Suporte total ao Supabase/Render)
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
-elif db_url.startswith("https://"):
-    # If the user copied the dashboard URL instead of the connection string
-    print("❌ ERROR: DATABASE_URL seems to be a web URL (https). Please use the Internal Connection String.")
-    db_url = "sqlite:///trading_bot.db" # Fallback to avoid crash
+elif "supabase.co" in db_url and db_url.startswith("https://"):
+    print("⚠️ AVISO: Você usou a URL da API do Supabase. Use a Connection String (URI) da aba Database Settings.")
+    db_url = "sqlite:///trading_bot.db"
 
-engine = create_engine(db_url)
+# Configuração de Engine otimizada para Supabase (evita quedas de conexão)
+engine = create_engine(
+    db_url,
+    pool_pre_ping=True, # Verifica se a conexão está viva antes de usar
+    pool_recycle=3600    # Recicla conexões a cada hora
+)
 Session = sessionmaker(bind=engine)
+
 
 
 def init_db():
