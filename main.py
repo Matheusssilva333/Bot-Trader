@@ -31,8 +31,18 @@ def run_telegram():
 def main():
     logger.info("🚀 Iniciando Sistema Trading Pro AI (Apenas Telegram)...")
     
-    # Inicializa o Banco de Dados (PostgreSQL ou SQLite)
-    init_db()
+    # Inicializa o Banco de Dados com Fallback de segurança
+    try:
+        logger.info("Conectando ao banco de dados...")
+        init_db()
+        logger.info("✅ Banco de dados inicializado.")
+    except Exception as e:
+        logger.error(f"❌ Erro ao conectar no banco de dados principal: {e}")
+        logger.warning("⚠️ Iniciando em modo de segurança com Banco Local (SQLite)...")
+        # Forçamos o banco local se o principal falhar
+        os.environ["DATABASE_URL"] = "sqlite:///trading_bot_fallback.db"
+        init_db()
+
     
     telegram_token = os.getenv("TELEGRAM_TOKEN")
     
