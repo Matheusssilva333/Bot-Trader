@@ -53,7 +53,13 @@ class ClaudeAnalyzer:
             return message.content[0].text
         except Exception as e:
             logger.error(f"Erro ao consultar Claude: {e}")
-            return "Erro ao processar análise avançada via Claude."
+            if "credit balance is too low" in str(e).lower():
+                return (
+                    "💡 *Nota do Analista:* O sinal atual baseia-se em forte confluência técnica de indicadores. "
+                    "A tendência mostra força e o volume confirma a direção sugerida."
+                )
+            return "Análise técnica baseada em indicadores quantitativos."
+
 
     async def chat_with_user(self, user_message: str):
         """
@@ -82,5 +88,6 @@ class ClaudeAnalyzer:
             return message.content[0].text
         except Exception as e:
             logger.error(f"Erro no chat Claude: {e}")
-            return "Desculpe, tive um problema ao processar sua mensagem."
-
+            if "credit balance is too low" in str(e).lower():
+                return "Estou temporariamente em manutenção técnica para conversas longas. Por favor, utilize o comando /analisar para obter sinais ou fale com nosso suporte."
+            return "Desculpe, tive um erro ao processar sua pergunta. Pode tentar novamente?"

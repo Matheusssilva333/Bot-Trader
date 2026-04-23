@@ -62,7 +62,9 @@ class User(Base):
     platform = Column(String)
     is_vip = Column(Boolean, default=False)
     subscription_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     last_interaction = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 def get_user(user_id):
     session = get_session()
