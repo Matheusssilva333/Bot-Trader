@@ -1,14 +1,13 @@
 pandas==2.1.4
 numpy==1.26.4
 yfinance
-pandas-ta==0.3.14b0
+https://github.com/twopirllc/pandas-ta/archive/master.zip
 xgboost
 scikit-learn
 plotly
 python-dotenv
 ta
 python-telegram-bot
-discord.py
 mercadopago
 sqlalchemy
 requests
