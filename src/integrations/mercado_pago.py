@@ -15,7 +15,7 @@ class PaymentManager:
             print("Warning: MERCADO_PAGO_ACCESS_TOKEN not found in .env")
         self.sdk = mercadopago.SDK(access_token)
 
-    def create_payment_link(self, user_id: str, platform: str):
+    def create_payment_link(self, user_id: str, platform: str = "telegram"):
         """
         Creates a payment preference for the R$ 30,00 subscription.
         """
@@ -30,6 +30,7 @@ class PaymentManager:
                 }
             ],
             "external_reference": f"{platform}_{user_id}",
+
             "back_urls": {
                 "success": "https://t.me/your_bot_user", # Optional
                 "pending": "https://t.me/your_bot_user",
