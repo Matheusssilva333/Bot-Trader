@@ -14,6 +14,8 @@ class User(Base):
     is_vip = Column(Boolean, default=False)
     payment_date = Column(DateTime)
     expiry_date = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.datetime.now)
+
 
 db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
 if db_url.startswith("postgres://"):

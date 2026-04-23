@@ -6,19 +6,25 @@ import logging
 
 logger = logging.getLogger("TelegramCommands")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user_name = update.effective_user.first_name
     
+    # Ensure user is registered to start the trial
+    user = get_user(user_id)
+    if not user:
+        create_or_update_user(user_id, "telegram", False)
+        user = get_user(user_id)
+
     welcome_msg = (
         f"👋 *Olá, {user_name}! Bem-vindo ao Bot Trading Pro AI*\n\n"
-        "O sistema de inteligência artificial mais avançado para sinais na B3 (Mini Índice e Mini Dólar).\n\n"
+        "O sistema de inteligência artificial mais avançado para sinais na B3.\n\n"
+        "🎁 *BÔNUS:* Você ganhou **7 DIAS GRÁTIS** de acesso total!\n"
+        f"Seu período de teste começou em: {user.created_at.strftime('%d/%m/%Y')}\n\n"
         "📈 *O que eu faço?*\n"
-        "Analiso volume, price action e indicadores técnicos usando XGBoost para prever a próxima tendência.\n\n"
-        "📌 *Comandos principais:*\n"
-        "• /analisar - Gera um sinal em tempo real\n"
-        "• /vip - Adquira acesso vitalício\n"
-        "• /ajuda - Tutorial completo"
+        "Analiso volume e price action para prever a próxima tendência.\n\n"
+        "📌 *Comandos:*\n"
+        "• /analisar - Gera um sinal\n"
+        "• /status - Ver quanto tempo de teste resta"
     )
     
     keyboard = [
@@ -29,6 +35,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(welcome_msg, parse_mode='Markdown', reply_markup=reply_markup)
+
 
 async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info_text = (
@@ -63,11 +70,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
     user = get_user(user_id)
+    if not user:
+        create_or_update_user(user_id, "telegram", False)
+        user = get_user(user_id)
+
+    import datetime
+    trial_days = 7
+    days_used = (datetime.datetime.now() - user.created_at).days
+    days_left = max(0, trial_days - days_used)
     
-    status = "💎 VIP" if user and user.is_vip else "🆓 Gratuito"
+    status = "💎 VIP" if user.is_vip else "🆓 Teste Grátis"
     
     msg = (
         "👤 *Status da sua Conta*\n\n"
@@ -75,10 +88,15 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Plano: *{status}*\n"
     )
     
-    if not user or not user.is_vip:
-        msg += "\n⚠️ Você está no plano limitado. Use /vip para liberar todas as funções."
+    if not user.is_vip:
+        if days_left > 0:
+            msg += f"⏳ Restam **{days_left} dias** de teste gratuito."
+        else:
+            msg += "❌ Seu teste gratuito **expirou**."
+        msg += "\n\nUse /vip para liberar acesso vitalício."
         
     await update.message.reply_text(msg, parse_mode='Markdown')
+
 
 async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance, asset=None):
     # This can be called from command or callback
@@ -97,6 +115,9 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         asset = "WDO"
 
     user = get_user(user_id)
+    if not user:
+        create_or_update_user(user_id, "telegram", False)
+        user = get_user(user_id)
     
     # Check VIP status (Sync with Mercado Pago)
     is_paid = bot_instance.pm.check_payment_status(f"telegram_{user_id}")
@@ -104,13 +125,23 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         create_or_update_user(user_id, "telegram", True)
         user = get_user(user_id)
 
-    if not user or not user.is_vip:
-        msg = "❌ *Acesso Negado*\n\nEsta função é exclusiva para membros VIP.\nUse /vip para assinar."
+    # TRIAL LOGIC: Check if VIP OR if trial (7 days) is still active
+    import datetime
+    trial_days = 7
+    trial_expired = (datetime.datetime.now() - user.created_at).days >= trial_days
+    
+    if not user.is_vip and trial_expired:
+        msg = (
+            "❌ *Período de Teste Expirado*\n\n"
+            "Seus 7 dias gratuitos acabaram. Para continuar recebendo sinais de alta precisão, adquira o acesso VIP.\n\n"
+            "Use /vip para assinar por apenas R$ 30,00."
+        )
         if query:
             await query.edit_message_text(msg, parse_mode='Markdown')
         else:
             await effective_update.reply_text(msg, parse_mode='Markdown')
         return
+
 
     wait_msg = await effective_update.reply_text(f"🔄 *Analisando {asset}...* extraindo indicadores de volume e preço.", parse_mode='Markdown')
     

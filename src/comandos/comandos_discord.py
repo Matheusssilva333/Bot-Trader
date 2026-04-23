@@ -12,18 +12,27 @@ class TradingCommands(commands.Cog):
 
     @commands.hybrid_command(name="start", description="Inicia o bot e mostra as opções principais")
     async def start(self, ctx):
+        user_id = str(ctx.author.id)
+        user = get_user(user_id)
+        if not user:
+            create_or_update_user(user_id, "discord", False)
+            user = get_user(user_id)
+
         embed = discord.Embed(
             title="👋 Bem-vindo ao Bot Trading Pro AI",
             description=(
-                "O sistema de inteligência artificial mais avançado para sinais na B3 (Mini Índice e Mini Dólar).\n\n"
+                "O sistema de inteligência artificial mais avançado para sinais na B3.\n\n"
+                "🎁 **BÔNUS:** Você ganhou **7 DIAS GRÁTIS** de acesso total!\n"
+                f"Seu teste começou em: {user.created_at.strftime('%d/%m/%Y')}\n\n"
                 "📈 **O que eu faço?**\n"
-                "Analiso volume, price action e indicadores técnicos usando XGBoost para prever a próxima tendência."
+                "Analiso volume e price action para prever a próxima tendência."
             ),
             color=discord.Color.blue()
         )
-        embed.add_field(name="📌 Comandos", value="`!analisar` ou `/analisar` - Gerar sinal\n`!vip` ou `/vip` - Adquirir acesso\n`!ajuda` ou `/ajuda` - Guia completo", inline=False)
+        embed.add_field(name="📌 Comandos", value="`/analisar` - Gerar sinal\n`/status` - Ver tempo de teste\n`/vip` - Adquirir acesso", inline=False)
         
         await ctx.send(embed=embed)
+
 
     @commands.hybrid_command(name="info", description="Sobre a Inteligência Artificial do bot")
     async def info(self, ctx):
@@ -72,16 +81,30 @@ class TradingCommands(commands.Cog):
     async def status(self, ctx):
         user_id = str(ctx.author.id)
         user = get_user(user_id)
-        status = "💎 VIP" if user and user.is_vip else "🆓 Gratuito"
+        if not user:
+            create_or_update_user(user_id, "discord", False)
+            user = get_user(user_id)
+
+        import datetime
+        trial_days = 7
+        days_used = (datetime.datetime.now() - user.created_at).days
+        days_left = max(0, trial_days - days_used)
+        
+        status = "💎 VIP" if user.is_vip else "🆓 Teste Grátis"
         
         embed = discord.Embed(title="👤 Status da Conta", color=discord.Color.light_grey())
         embed.add_field(name="Usuário", value=ctx.author.name, inline=True)
         embed.add_field(name="Plano", value=status, inline=True)
         
-        if not user or not user.is_vip:
-            embed.set_footer(text="⚠️ Plano limitado. Use /vip para assinar.")
+        if not user.is_vip:
+            if days_left > 0:
+                embed.add_field(name="⏳ Tempo Restante", value=f"{days_left} dias de teste", inline=False)
+            else:
+                embed.add_field(name="❌ Status", value="Teste Expirado", inline=False)
+            embed.set_footer(text="Use /vip para liberar acesso vitalício.")
             
         await ctx.send(embed=embed)
+
 
     @commands.hybrid_command(name="vip", description="Tornar-se membro VIP")
     async def vip(self, ctx):
@@ -104,19 +127,29 @@ class TradingCommands(commands.Cog):
 
     @commands.hybrid_command(name="analisar", description="Analisar tendência da B3 (WIN ou WDO)")
     async def analisar(self, ctx, asset: str = "WDO"):
-
         user_id = str(ctx.author.id)
         asset = asset.upper()
         
+        user = get_user(user_id)
+        if not user:
+            create_or_update_user(user_id, "discord", False)
+            user = get_user(user_id)
+
         # Sync payment status
         is_paid = self.bot.pm.check_payment_status(f"discord_{user_id}")
         if is_paid:
             create_or_update_user(user_id, "discord", True)
+            user = get_user(user_id)
         
-        user = get_user(user_id)
-        if not user or not user.is_vip:
-            await ctx.send("❌ **Acesso Negado.** Esta função é exclusiva para membros VIP. Use `!vip` para assinar.")
+        # TRIAL LOGIC
+        import datetime
+        trial_days = 7
+        trial_expired = (datetime.datetime.now() - user.created_at).days >= trial_days
+        
+        if not user.is_vip and trial_expired:
+            await ctx.send("❌ **Período de Teste Expirado.** Seus 7 dias grátis acabaram. Use `/vip` para continuar.")
             return
+
 
         status_msg = await ctx.send(f"🔄 **Analisando {asset}...** coletando dados da B3.")
         
