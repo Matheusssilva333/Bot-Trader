@@ -45,9 +45,10 @@ class DiscordBot(commands.Bot):
 
 if __name__ == "__main__":
     bot = DiscordBot()
-    token = os.getenv("DISCORD_TOKEN")
-    if token:
+    token = os.getenv("DISCORD_TOKEN", "").strip()
+    if token and token != "seu_token_aqui":
         bot.run(token)
+
     else:
         logger.error("DISCORD_TOKEN não encontrado no ambiente.")
 

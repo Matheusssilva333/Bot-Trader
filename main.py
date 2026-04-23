@@ -62,9 +62,12 @@ if __name__ == "__main__":
         logger.error("❌ ERRO CRÍTICO: Nenhum token de bot (Telegram ou Discord) foi encontrado.")
         logger.error("Certifique-se de configurar as variáveis de ambiente no Render.")
     
-    # Start Telegram Bot Thread
+    # Start Telegram Bot Thread (With delay to avoid Conflict on Render)
     if telegram_token:
+        import time
+        time.sleep(5) 
         t_telegram = threading.Thread(target=run_telegram, name="TelegramThread", daemon=True)
+
         t_telegram.start()
         logger.info("✅ Thread do Telegram iniciada.")
     else:

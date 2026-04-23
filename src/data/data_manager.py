@@ -59,11 +59,9 @@ class DataManager:
                 logger.error(f"Não foi possível obter nenhum dado para {self.symbol}")
                 raise ValueError(f"Ticker {self.symbol} sem dados.")
 
-            # Fix MultiIndex columns
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
+            # Fix for any column format (MultiIndex or Tuples)
+            df.columns = [str(col[0] if isinstance(col, tuple) else col).lower() for col in df.columns]
 
-            df.columns = [col.lower() for col in df.columns]
             
             # Ensure index is datetime
             df.index = pd.to_datetime(df.index)

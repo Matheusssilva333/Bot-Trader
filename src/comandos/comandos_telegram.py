@@ -63,12 +63,13 @@ async def suporte_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
         "📖 *Guia de Uso do Bot Trading Pro*\n\n"
-        "1️⃣ *Análise:* Use `/analisar WDO` ou `/analisar WIN`. Se não especificar, o padrão é WDO.\n"
+        "1️⃣ *Análise:* Use /analisar WDO ou /analisar WIN.\n"
         "2️⃣ *VIP:* O acesso VIP libera sinais ilimitados.\n"
-        "3️⃣ *Gerenciamento:* NUNCA opere sem Stop Loss. O bot indica a tendência, mas o mercado é soberano.\n\n"
-        "❓ *Dúvidas?* @seu_suporte"
+        "3️⃣ *Gerenciamento:* NUNCA opere sem Stop Loss.\n\n"
+        "❓ *Dúvidas?* Fale com o suporte."
     )
     await update.message.reply_text(help_text, parse_mode='Markdown')
+
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
