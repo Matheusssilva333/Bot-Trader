@@ -1,13 +1,13 @@
 pandas
 numpy
-yfinance --upgrade
+yfinance
 pandas-ta
 xgboost
 scikit-learn
 plotly
 python-dotenv
 ta
-python-telegram-bot --upgrade
+python-telegram-bot
 discord.py
 mercadopago
 sqlalchemy
