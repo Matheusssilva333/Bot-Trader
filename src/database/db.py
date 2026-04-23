@@ -26,13 +26,17 @@ elif "supabase.co" in db_url and db_url.startswith("https://"):
     print("⚠️ AVISO: Você usou a URL da API do Supabase. Use a Connection String (URI) da aba Database Settings.")
     db_url = "sqlite:///trading_bot.db"
 
-# Configuração de Engine otimizada para Supabase (evita quedas de conexão)
+# Configuração de Engine otimizada para Supabase Pooler (PGBouncer)
+# Nota: Alguns poolers não suportam pre-ping ou exigem configurações específicas
 engine = create_engine(
     db_url,
-    pool_pre_ping=True, # Verifica se a conexão está viva antes de usar
-    pool_recycle=3600    # Recicla conexões a cada hora
+    pool_pre_ping=False, # Desativado para compatibilidade total com PGBouncer em modo Transaction
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=1800
 )
 Session = sessionmaker(bind=engine)
+
 
 
 
