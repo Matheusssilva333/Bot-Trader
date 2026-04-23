@@ -49,9 +49,10 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• **Fluxo de Ordens:** Identificação de pressão compradora/vendedora.\n"
         "• **Price Action:** Padrões de reversão em tempo real.\n"
         "• **Estatística:** Desvios padrões via Bandas de Bollinger.\n"
-        "• **IA Claude:** Parecer técnico qualitativo final."
+        "• **E-mail de Suporte:** `matheus.dev11@outlook.com`"
     )
     await update.message.reply_text(info_text, parse_mode='Markdown')
+
 
 async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance, asset=None):
     query = update.callback_query
@@ -139,7 +140,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         keyboard = [[InlineKeyboardButton("💳 Assinar VIP (R$ 30,00)", url=payment_url)]]
         await query.message.reply_text("💎 *OPERAÇÕES ILIMITADAS*\nAssine para liberar todos os recursos:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
     elif data == "get_support":
-        await query.message.reply_text("🛠️ *SUPORTE TRADING PRO*\nFale com @seu_suporte_aqui\nAtendimento: 09h às 18h.", parse_mode='Markdown')
+        await query.message.reply_text("🛠️ *SUPORTE TRADING PRO*\n\nE-mail: `matheus.dev11@outlook.com` \nAtendimento: Segunda a Sexta, 09h às 18h.", parse_mode='Markdown')
+
 
 def setup_telegram_commands(app, bot_instance):
     app.add_handler(CommandHandler("start", start))
