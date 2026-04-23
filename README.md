@@ -1,6 +1,6 @@
 # Bot Trading Pro AI 🚀
 
-Sistema profissional de análise de Day Trading com Machine Learning integrado ao Discord, Telegram e Mercado Pago.
+Sistema profissional de análise de Day Trading com Machine Learning integrado ao Telegram e Mercado Pago.
 
 ## 🛠️ Funcionalidades
 - **Predição por IA**: Utiliza algoritmos XGBoost treinados com indicadores técnicos (RSI, MACD, Médias Móveis, etc).
