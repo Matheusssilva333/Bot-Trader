@@ -12,3 +12,4 @@ discord.py
 mercadopago
 sqlalchemy
 requests
+anthropic

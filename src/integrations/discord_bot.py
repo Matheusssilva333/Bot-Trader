@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from src.data.data_manager import DataManager
 from src.models.predictor import TradingPredictor
 from src.integrations.mercado_pago import PaymentManager
+from src.integrations.claude_ai import ClaudeAnalyzer
 from src.database.db import get_user, create_or_update_user, init_db
 from src.utils.logger import setup_logger
 
@@ -22,6 +23,8 @@ class DiscordBot(commands.Bot):
         self.dm = DataManager()
         self.predictor = TradingPredictor()
         self.pm = PaymentManager()
+        self.ai = ClaudeAnalyzer()
+
 
 
     async def setup_hook(self):

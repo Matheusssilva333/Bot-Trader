@@ -149,14 +149,21 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         confidence = prob if prediction == 1 else (1 - prob)
         strength = "🔥 FORTE" if confidence > 0.75 else "⚡ MODERADA"
         
+        # Obter opinião da IA (Claude)
+        indicators_dict = last_row.to_dict('records')[0]
+        ai_opinion = await bot_instance.ai.get_market_opinion(asset, signal, confidence, indicators_dict)
+        
         response = (
             f"📊 *ANÁLISE DE MERCADO B3*\n\n"
             f"Ativo: `{asset}`\n"
             f"Sinal: *{signal}*\n"
             f"Força: *{strength}*\n"
             f"Confiança: `{confidence:.2%}`\n\n"
+            f"🤖 *Análise da IA (Claude):*\n"
+            f"_{ai_opinion}_\n\n"
             f"⚠️ Use stop loss técnico em todas as operações."
         )
+
         await wait_msg.edit_text(response, parse_mode='Markdown')
     except Exception as e:
         logger.error(f"Erro na análise Telegram: {e}")

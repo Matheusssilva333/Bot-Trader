@@ -166,13 +166,19 @@ class TradingCommands(commands.Cog):
             confidence = prob if prediction == 1 else (1 - prob)
             strength = "🔥 FORTE" if confidence > 0.75 else "⚡ MODERADA"
             
+            # Obter opinião da IA (Claude)
+            indicators_dict = last_row.to_dict('records')[0]
+            ai_opinion = await self.bot.ai.get_market_opinion(asset, signal, confidence, indicators_dict)
+            
             embed = discord.Embed(title="📊 ANÁLISE DE MERCADO B3", color=discord.Color.blue())
             embed.add_field(name="Ativo", value=f"`{asset}`", inline=True)
             embed.add_field(name="Sinal", value=f"**{signal}**", inline=True)
             embed.add_field(name="Força", value=strength, inline=True)
             embed.add_field(name="Confiança", value=f"`{confidence:.2%}`", inline=False)
+            embed.add_field(name="Análise IA (Claude)", value=f"*{ai_opinion}*", inline=False)
             embed.add_field(name="Estratégia", value="XGBoost Pro V2", inline=True)
             embed.set_footer(text="⚠️ Use stop loss técnico em todas as operações.")
+
             
             await status_msg.edit(content=None, embed=embed)
         except Exception as e:
