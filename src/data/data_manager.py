@@ -24,31 +24,25 @@ class DataManager:
 
     def fetch_data(self, period: str = "15d", interval: str = "5m"):
         """
-        Fetches historical data with advanced fallbacks and browser emulation.
+        Fetches historical data with advanced fallbacks.
         """
-        # Create a session with a User-Agent to avoid blocks on cloud environments
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        })
-
         try:
             logger.info(f"Buscando dados para {self.asset_type} (Ticker: {self.symbol})...")
             
-            # Use the session in yfinance
+            # yfinance handles its own session now (often uses curl_cffi internally)
             df = yf.download(
                 self.symbol, 
                 period=period, 
                 interval=interval, 
                 threads=False, 
-                progress=False,
-                session=session
+                progress=False
             )
             
             # Fallback 1: Try a different interval if data is missing
             if df.empty or len(df) < 10:
                 logger.warning(f"Dados insuficientes para {interval}. Tentando 15m...")
-                df = yf.download(self.symbol, period="30d", interval="15m", threads=False, progress=False, session=session)
+                df = yf.download(self.symbol, period="30d", interval="15m", threads=False, progress=False)
+
 
             # Fallback 2: Try an alternative ticker for WIN if ^BVSP fails
             if df.empty and self.asset_type == "WIN":

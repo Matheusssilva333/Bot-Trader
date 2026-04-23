@@ -18,11 +18,18 @@ class User(Base):
 
 
 db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
+
+# Fix common Render/PostgreSQL URL issues
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+elif db_url.startswith("https://"):
+    # If the user copied the dashboard URL instead of the connection string
+    print("❌ ERROR: DATABASE_URL seems to be a web URL (https). Please use the Internal Connection String.")
+    db_url = "sqlite:///trading_bot.db" # Fallback to avoid crash
 
 engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
+
 
 def init_db():
     Base.metadata.create_all(engine)
