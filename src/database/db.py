@@ -12,29 +12,25 @@ engine = None
 Session = None
 
 def reset_db():
-    """Limpa a conexão atual para permitir uma nova inicialização (usado no fallback)."""
+    """Limpa engine/sessão para permitir nova inicialização (testes ou reload)."""
     global engine, Session
     engine = None
     Session = None
-    logger.info("🔄 Conexão com o banco de dados resetada para nova tentativa.")
+    logger.info("Conexão com o banco de dados resetada.")
 
 def get_engine():
     global engine
     if engine is None:
-        db_url = os.getenv("DATABASE_URL", "sqlite:///trading_bot.db")
-        
-        # Sanitização Profissional de URL
-        if db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql://", 1)
-        elif db_url.startswith("https://"):
-            db_url = "sqlite:///trading_bot.db"
-
-
-        # Otimização para Supabase / PGBouncer
+        # Somente SQLite. Caminho: arquivo ou URL completa sqlite:///...
+        raw = os.getenv("SQLITE_DATABASE", "trading_bot.db")
+        if raw.startswith("sqlite:"):
+            db_url = raw
+        else:
+            db_url = f"sqlite:///{raw}"
         engine = create_engine(
             db_url,
-            pool_pre_ping=False,
-            pool_recycle=1800
+            connect_args={"check_same_thread": False},
+            pool_pre_ping=True,
         )
     return engine
 

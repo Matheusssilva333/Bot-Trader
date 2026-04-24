@@ -40,6 +40,12 @@ class TradingPredictor:
             joblib.dump(self.scaler, self.scaler_path)
             return pd.DataFrame(X_scaled, columns=X.columns), df['target']
         else:
+            # Check if scaler is already loaded (it should be if load_model was called)
+            if hasattr(self.scaler, 'mean_'):
+                X_scaled = self.scaler.transform(X)
+                return pd.DataFrame(X_scaled, columns=X.columns)
+            
+            # Fallback: Try loading if not loaded
             if os.path.exists(self.scaler_path):
                 self.scaler = joblib.load(self.scaler_path)
                 X_scaled = self.scaler.transform(X)

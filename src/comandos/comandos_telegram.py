@@ -57,7 +57,6 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance, asset=None):
     query = update.callback_query
     if query:
-        await query.answer()
         user_id = str(query.from_user.id)
         effective_update = query.message
     else:
@@ -77,7 +76,6 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         data = dm.fetch_data(period="5d", interval="5m")
         data_with_indicators = dm.add_indicators(data)
         
-        bot_instance.predictor.load_model()
         last_row = data_with_indicators.iloc[[-1]]
         prediction, prob = bot_instance.predictor.predict_next(last_row)
         
@@ -107,6 +105,27 @@ async def analyze_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bo
         logger.error(f"Erro na análise: {e}")
         await wait_msg.edit_text(f"❌ *Ops!* Nossos servidores estão recebendo muitos dados de `{asset}` agora. Tente novamente em 1 minuto.")
 
+async def ajuda_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        "📘 *Guia rápido*\n\n"
+        "/start — menu principal e botões de análise\n"
+        "/analisar — sinal (opcional: `/analisar WIN`)\n"
+        "/status — plano atual\n"
+        "/vip — link de assinatura\n"
+        "/info — sobre o motor quantitativo\n"
+        "/suporte — contato\n\n"
+        "Dica: use os botões após /start para WDO ou WIN."
+    )
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+
+async def suporte_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🛠️ *SUPORTE TRADING PRO*\n\nE-mail: `matheus.dev11@outlook.com`\nAtendimento: Segunda a Sexta, 09h às 18h.",
+        parse_mode="Markdown",
+    )
+
+
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     user = get_user(user_id)
@@ -128,19 +147,44 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_i
     response = await bot_instance.ai.chat_with_user(update.message.text)
     await update.message.reply_text(response)
 
+async def _send_vip_offer(update: Update, bot_instance, reply_target):
+    """Fluxo VIP por botão inline ou por comando /vip (sem callback_query)."""
+    user_id = str(update.effective_user.id)
+    payment_url = bot_instance.pm.create_payment_link(user_id, "telegram")
+    if not payment_url:
+        await reply_target.reply_text(
+            "❌ Não foi possível gerar o link de pagamento agora. Tente de novo em alguns minutos ou fale com o /suporte.",
+            parse_mode="Markdown",
+        )
+        return
+    keyboard = [[InlineKeyboardButton("💳 Assinar VIP (R$ 30,00)", url=payment_url)]]
+    await reply_target.reply_text(
+        "💎 *OPERAÇÕES ILIMITADAS*\nAssine para liberar todos os recursos:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+    )
+
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, bot_instance):
     query = update.callback_query
-    data = query.data
+    # /vip está registrado como CommandHandler mas reutiliza este callback — não há callback_query.
+    if query is None:
+        if update.message:
+            await _send_vip_offer(update, bot_instance, update.message)
+        return
+
+    data = query.data or ""
+    await query.answer()
     if data.startswith("analyze_"):
         asset = data.split("_")[1]
         await analyze_handler(update, context, bot_instance, asset=asset)
     elif data == "get_vip":
-        user_id = str(query.from_user.id)
-        payment_url = bot_instance.pm.create_payment_link(user_id, "telegram")
-        keyboard = [[InlineKeyboardButton("💳 Assinar VIP (R$ 30,00)", url=payment_url)]]
-        await query.message.reply_text("💎 *OPERAÇÕES ILIMITADAS*\nAssine para liberar todos os recursos:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+        await _send_vip_offer(update, bot_instance, query.message)
     elif data == "get_support":
-        await query.message.reply_text("🛠️ *SUPORTE TRADING PRO*\n\nE-mail: `matheus.dev11@outlook.com` \nAtendimento: Segunda a Sexta, 09h às 18h.", parse_mode='Markdown')
+        await query.message.reply_text(
+            "🛠️ *SUPORTE TRADING PRO*\n\nE-mail: `matheus.dev11@outlook.com` \nAtendimento: Segunda a Sexta, 09h às 18h.",
+            parse_mode="Markdown",
+        )
 
 
 def setup_telegram_commands(app, bot_instance):
@@ -148,6 +192,8 @@ def setup_telegram_commands(app, bot_instance):
     app.add_handler(CommandHandler("analisar", lambda u, c: analyze_handler(u, c, bot_instance)))
     app.add_handler(CommandHandler("status", status_command))
     app.add_handler(CommandHandler("info", info_command))
+    app.add_handler(CommandHandler("ajuda", ajuda_command))
+    app.add_handler(CommandHandler("suporte", suporte_command))
     app.add_handler(CommandHandler("vip", lambda u, c: button_callback(u, c, bot_instance))) # Reutiliza lógica
     app.add_handler(CallbackQueryHandler(lambda u, c: button_callback(u, c, bot_instance)))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: chat_handler(u, c, bot_instance)))

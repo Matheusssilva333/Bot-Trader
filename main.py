@@ -1,6 +1,5 @@
 import os
 import threading
-import logging
 from src.integrations.telegram_bot import TelegramBot
 from src.database.db import init_db
 from src.utils.logger import setup_logger
@@ -21,32 +20,32 @@ def run_http_server():
     app.run(host="0.0.0.0", port=port)
 
 def run_telegram():
-    try:
-        logger.info("Iniciando Telegram Bot...")
-        bot = TelegramBot()
-        bot.run()
-    except Exception as e:
-        logger.error(f"Erro no Telegram Bot: {e}")
+    """Mantém o polling ativo: reinicia após falhas de rede ou encerramento inesperado."""
+    import time
+    backoff = 5
+    max_backoff = 300
+    while True:
+        try:
+            logger.info("Iniciando Telegram Bot...")
+            bot = TelegramBot()
+            if not getattr(bot, "token", None):
+                logger.error("TelegramBot sem token; encerrando thread do Telegram.")
+                return
+            bot.run()
+            logger.warning("Polling do Telegram encerrou; reiniciando em %ss.", backoff)
+        except Exception as e:
+            logger.exception("Erro no Telegram Bot: %s", e)
+            logger.info("Nova tentativa em %ss.", backoff)
+        time.sleep(backoff)
+        backoff = min(backoff * 2, max_backoff)
 
 def main():
     logger.info("🚀 Iniciando Sistema Trading Pro AI (Apenas Telegram)...")
-    
-    # Inicializa o Banco de Dados com Fallback de segurança
-    try:
-        logger.info("Conectando ao banco de dados...")
-        init_db()
-        logger.info("✅ Banco de dados inicializado.")
-    except Exception as e:
-        logger.error(f"❌ Erro ao conectar no banco de dados principal: {e}")
-        logger.warning("⚠️ Iniciando em modo de segurança com Banco Local (SQLite)...")
-        # Forçamos o banco local se o principal falhar
-        os.environ["DATABASE_URL"] = "sqlite:///trading_bot_fallback.db"
-        from src.database.db import reset_db
-        reset_db() # Limpa a conexão antiga do Supabase que falhou
-        init_db()  # Tenta novamente com o novo DATABASE_URL (SQLite)
 
+    logger.info("Inicializando banco local (SQLite)...")
+    init_db()
+    logger.info("✅ Banco de dados inicializado.")
 
-    
     telegram_token = os.getenv("TELEGRAM_TOKEN")
     
     if not telegram_token:

@@ -1,10 +1,35 @@
 import anthropic
 import os
 import logging
-from dotenv import load_dotenv
 
-load_dotenv()
 logger = logging.getLogger("ClaudeAI")
+
+
+def _anthropic_error_blob(exc: BaseException) -> str:
+    """Junta mensagem da exceção + corpo JSON (Anthropic devolve detalhes em body)."""
+    chunks = [str(exc), repr(exc)]
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        chunks.append(str(body))
+        err = body.get("error")
+        if isinstance(err, dict):
+            chunks.append(str(err.get("message", "")))
+    return " ".join(chunks).lower()
+
+
+def _is_quota_or_billing_error(exc: BaseException) -> bool:
+    blob = _anthropic_error_blob(exc)
+    return any(
+        s in blob
+        for s in (
+            "credit balance is too low",
+            "insufficient_quota",
+            "billing",
+            "rate_limit",
+            "overloaded",
+        )
+    )
+
 
 class ClaudeAnalyzer:
     """
@@ -17,7 +42,7 @@ class ClaudeAnalyzer:
             logger.warning("CLAUDE_API_KEY não configurada corretamente.")
             self.client = None
         else:
-            self.client = anthropic.Anthropic(api_key=api_key)
+            self.client = anthropic.AsyncAnthropic(api_key=api_key)
 
     async def get_market_opinion(self, asset: str, signal: str, confidence: float, indicators: dict):
         """
@@ -41,9 +66,8 @@ class ClaudeAnalyzer:
                 "Seja direto e autoritativo."
             )
 
-
-            message = self.client.messages.create(
-                model="claude-3-haiku-20240307", # Fast and cost-effective for signals
+            message = await self.client.messages.create(
+                model="claude-3-haiku-20240307",
                 max_tokens=150,
                 temperature=0.5,
                 messages=[
@@ -53,13 +77,12 @@ class ClaudeAnalyzer:
             return message.content[0].text
         except Exception as e:
             logger.error(f"Erro ao consultar Claude: {e}")
-            if "credit balance is too low" in str(e).lower():
+            if _is_quota_or_billing_error(e):
                 return (
                     "💡 *Nota do Analista:* O sinal atual baseia-se em forte confluência técnica de indicadores. "
                     "A tendência mostra força e o volume confirma a direção sugerida."
                 )
             return "Análise técnica baseada em indicadores quantitativos."
-
 
     async def chat_with_user(self, user_message: str):
         """
@@ -77,7 +100,7 @@ class ClaudeAnalyzer:
                 f"Usuário diz: {user_message}"
             )
 
-            message = self.client.messages.create(
+            message = await self.client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=300,
                 temperature=0.7,
@@ -88,6 +111,9 @@ class ClaudeAnalyzer:
             return message.content[0].text
         except Exception as e:
             logger.error(f"Erro no chat Claude: {e}")
-            if "credit balance is too low" in str(e).lower():
-                return "Estou temporariamente em manutenção técnica para conversas longas. Por favor, utilize o comando /analisar para obter sinais ou fale com nosso suporte."
+            if _is_quota_or_billing_error(e):
+                return (
+                    "Estou temporariamente sem acesso à IA de conversação (créditos ou limite). "
+                    "Use /analisar para o sinal quantitativo ou /suporte."
+                )
             return "Desculpe, tive um erro ao processar sua pergunta. Pode tentar novamente?"

@@ -47,7 +47,7 @@ class DataManager:
             # Fallback 2: Try an alternative ticker for WIN if ^BVSP fails
             if df.empty and self.asset_type == "WIN":
                 logger.warning("Tentando ticker alternativo para WIN (EWZ)...")
-                df = yf.download("EWZ", period="15d", interval="5m", threads=False, progress=False, session=session)
+                df = yf.download("EWZ", period="15d", interval="5m", threads=False, progress=False)
 
             if df.empty:
                 logger.error(f"Não foi possível obter nenhum dado para {self.symbol}")
